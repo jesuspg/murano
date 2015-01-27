@@ -139,6 +139,15 @@ class Controller(object):
         LOG.debug('Templates:Delete <Id: {0}>'.format(template_id))
         target = {"template_id": template_id}
         policy.check('delete_template', request.context, target)
+        session = db_session.get_session()
+        template = session.query(models.Template).get(template_id)
+
+        if template is None:
+            LOG.info(_('Template <TempId {0}> is not '
+                       'found').format(template_id))
+            raise exc.HTTPNotFound
+
+        temps.TemplateServices.delete(template_id)
         temps.TemplateServices.remove(template_id)
         return
 
@@ -192,10 +201,7 @@ class Controller(object):
         environments.EnvironmentServices.save_environment_description(session.id, environment.description)
         environment.save(unit)
 
-
         return session.to_dict()
-
-
 
 
 def create_resource():

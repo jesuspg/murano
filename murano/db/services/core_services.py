@@ -50,7 +50,6 @@ class CoreServices(object):
 
         if env_description is None:
             return None
-        print env_description
         if not 'services' in env_description:
             return []
 
@@ -170,3 +169,14 @@ class CoreServices(object):
 
         utils.TraverseHelper.remove(path, env_description)
         save_description(session_id, env_description)
+
+    @staticmethod
+    def delete_template_data(template_id, path):
+        get_description = temps.TemplateServices.get_template_description
+        save_description = temps.TemplateServices.\
+            save_template_description
+
+        tmp_description = get_description(template_id, False)
+
+        utils.TraverseHelper.remove(path, tmp_description)
+        save_description(tmp_description, template_id)

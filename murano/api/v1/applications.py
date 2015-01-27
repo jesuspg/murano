@@ -1,4 +1,5 @@
-#    Copyright (c) 2013 Mirantis, Inc.
+
+#    Copyright (c) 2015 Telefonica I+D.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -68,6 +69,8 @@ class Controller(object):
         try:
             result = core_services.CoreServices.get_template_data(template_id,
                                                          path)
+            if result is None:
+                raise exc.HTTPNotFound
         except (KeyError, ValueError, AttributeError):
             raise exc.HTTPNotFound
         return result
@@ -109,12 +112,9 @@ class Controller(object):
     def delete(self, request, template_id, path):
         LOG.debug('Applications:Put <TempId: {0}, '
                   'Path: {1}>'.format(template_id, path))
-
-        delete_data = core_services.CoreServices.delete_data
-        session_id = request.context.session
-
+        delete_data = core_services.CoreServices.delete_template_data
         try:
-            delete_data(template_id, session_id, path)
+            delete_data(template_id, path)
         except (KeyError, ValueError):
             raise exc.HTTPNotFound
 

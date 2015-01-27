@@ -1,4 +1,4 @@
-# Copyright (c) 2013 Mirantis, Inc.
+# Copyright (c) 2015 Telefonica I+D.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -79,7 +79,7 @@ class TemplateServices(object):
             template_id, False)
         temp_description['description'] = None
         TemplateServices.save_template_description(
-            temp_description, False)
+            temp_description, template_id, False)
 
     @staticmethod
     def remove(template_id):
@@ -107,6 +107,25 @@ class TemplateServices(object):
             return temp_description
         else:
             return temp_description['Objects']
+
+    @staticmethod
+    def get_application_description(template_id, application_id, inner=True):
+        """Returns template description for specified template.
+
+           :param template_id: Template Id
+           :param inner: return contents of template rather than whole
+            Object Model structure
+           :return: Template Description Object
+        """
+        unit = db_session.get_session()
+
+        temp = (unit.query(models.Template).get(template_id))
+        temp_description = temp.description
+
+        if not "services" in temp_description:
+            return []
+        else:
+            return temp_description['services']
 
     @staticmethod
     def save_template_description(template_des, template_id=None, inner=True):

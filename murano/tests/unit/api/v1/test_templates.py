@@ -1,5 +1,5 @@
-# Copyright (c) 2014 Hewlett-Packard Development Company, L.P.
-#
+# Copyright (c) 2015 Telefonica I+D.
+
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
@@ -17,8 +17,8 @@ import json
 from oslo.utils import timeutils
 from mock import Mock
 from mock import patch
-
 from webob import exc
+
 from murano.api.v1 import templates
 from murano.db import models
 import murano.tests.unit.api.base as tb
@@ -461,8 +461,9 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
                     },
                 "type": "io.murano.apps.apache.Tomcat",
                 "id": "54cea43d-5970-4c73-b9ac-fea656f3c722"
+                }
             }
-        }]
+        ]
 
         body = {
             "name": "template_name",
@@ -480,6 +481,92 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
         self.assertEqual(200, result.status_code)
         self.assertEqual(services, json.loads(result.body))
 
+        req = self._get('/templates/%s/services' % uuids[-1])
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+        self.assertEqual(1, len(json.loads(result.body)))
+
+        service_no_instance = [
+            {
+                "instance": "ef984a74-29a4-45c0-b1dc-2ab9f075732e",
+                "name": "tomcat",
+                "port": "8080",
+                "?": {
+                    "_26411a1861294160833743e45d0eaad9": {
+                        "name": "tomcat"
+                    },
+                "type": "io.murano.apps.apache.Tomcat",
+                "id": "54cea43d-5970-4c73-b9ac-fea656f3c722"
+                }
+            }
+        ]
+
+        req = self._post('/templates/%s/services' % uuids[-1],
+            json.dumps(service_no_instance))
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+
+        req = self._get('/templates/%s/services' % uuids[-1])
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+        self.assertEqual(2, len(json.loads(result.body)))
+        self.assertEqual(2, mock_uuid.call_count)
+
+    def test_delete_application_in_template(self):
+        """Create an template, test template.show()."""
+        self._set_policy_rules(
+            {'create_template': '@',
+             'delete_application': '@'}
+        )
+        self.expect_policy_check('create_template')
+
+        fake_now = timeutils.utcnow()
+        timeutils.utcnow.override_time = fake_now
+
+        uuids = ('temp_object_id', 'template_id')
+        mock_uuid = self._stub_uuid(uuids)
+
+        body = {
+            "name": "mytemplate",
+            "services": [
+                {
+                    "name": "tomcat",
+                    "port": "8080",
+                    "?": {
+                        "_26411a1861294160833743e45d0eaad9": {
+                            "name": "tomcat"
+                        },
+                        "type": "io.murano.apps.apache.Tomcat",
+                        "id": "54cea43d-5970-4c73-b9ac-fea656f3c722"
+                    }
+                }
+            ]
+        }
+
+        req = self._post('/templates', json.dumps(body))
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+
+        req = self._get('/templates/%s/services' % uuids[-1])
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+        self.assertEqual(1, len(json.loads(result.body)))
+
+        service_id = '54cea43d-5970-4c73-b9ac-fea656f3c722'
+        req = self._get('/templates/' + uuids[-1] +
+                        '/services/' + service_id)
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+
+        req = self._delete('/templates/' + uuids[-1] +
+                           '/services/' + service_id)
+        result = req.get_response(self.api)
+        self.assertEqual(200, result.status_code)
+
+        req = self._get('/templates/' + uuids[-1] +
+                        '/services/' + service_id)
+        result = req.get_response(self.api)
+        self.assertEqual(404, result.status_code)
         self.assertEqual(2, mock_uuid.call_count)
 
     def test_create_environment_with_invalid_name(self):
@@ -605,5 +692,4 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
         services_sess_mock.create.assert_is_called()
         self.assertIsNotNone(session_result)
         self.assertEqual('12345678', session_result['id'])
-
 
