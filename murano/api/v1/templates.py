@@ -13,6 +13,7 @@
 #    under the License.
 
 import re
+import types
 
 from oslo.db import exception as db_exc
 from webob import exc
@@ -20,9 +21,12 @@ from webob import exc
 from murano.api.v1 import request_statistics
 from murano.common import policy
 from murano.common import wsgi
+from murano.common import utils
 from murano.db import models
 from murano.db.services import core_services
 from murano.db.services import templates as temps
+from murano.db.services import environments
+from murano.db.services import sessions
 from murano.db import session as db_session
 
 from murano.openstack.common.gettextutils import _
@@ -138,11 +142,60 @@ class Controller(object):
         temps.TemplateServices.remove(template_id)
         return
 
+    def has_services(self, template):
+        if isinstance(template.description['Objects'], types.DictionaryType):
+            if 'services' in template.description['Objects'].keys():
+                return True
+        return False
+
+
     @request_statistics.stats_count(API_NAME, 'Createenvironment')
-    def createenvironment(self, request, template_id, body):
+    def create_environment(self, request, template_id, body):
         LOG.debug('Templates:Create environment <Id: {0}>'.
             format(template_id))
-        return
+
+        if not VALID_NAME_REGEX.match(str(body['name'])):
+            msg = _('Template name must contain only alphanumeric '
+                    'or "_-." characters, must start with alpha')
+            LOG.exception(msg)
+            raise exc.HTTPClientError(msg)
+
+        LOG.debug('Template name: {0}>'.format(body['name']))
+        unit = db_session.get_session()
+        template = unit.query(models.Template).get(template_id)
+
+        if template is None:
+            LOG.info(_('Template <TempId {0}> is not '
+                       'found').format(template_id))
+            raise exc.HTTPNotFound
+
+        # create environment
+        try:
+            environment = environments.EnvironmentServices.create(
+                body.copy(), request.context.tenant)
+        except db_exc.DBDuplicateEntry:
+            msg = _('Environment with specified name already exists')
+            LOG.exception(msg)
+            raise exc.HTTPConflict(msg)
+
+        # configure
+
+        user_id = request.context.user
+        session = sessions.SessionServices.create(environment.id, user_id)
+
+        path = '/Objects/services'
+
+        if self.has_services(template):
+            services_node = utils.TraverseHelper.get(path, template.description)
+            environment.description['Objects'].update({'services': services_node})
+
+        environments.EnvironmentServices.save_environment_description(session.id, environment.description)
+        environment.save(unit)
+
+
+        return session.to_dict()
+
+
 
 
 def create_resource():

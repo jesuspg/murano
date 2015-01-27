@@ -15,11 +15,136 @@
 
 import json
 from oslo.utils import timeutils
+from mock import Mock
+from mock import patch
 
+from webob import exc
 from murano.api.v1 import templates
 from murano.db import models
 import murano.tests.unit.api.base as tb
 import murano.tests.unit.utils as test_utils
+
+
+def get_session():
+
+    template_mock = Mock(name="template", spec=open)
+
+    template_mock.description = {"Objects":{
+                                          "?":{
+                                             "type":"io.murano.Template",
+                                             "id":"fccaf0e5d9f044709209c11bcefda8bf"
+                                          },
+                                          "name":"template_name",
+                                          "services":[
+                                             {
+                                                "?":{
+                                                   "type":"io.murano.apps.apache.Tomcat",
+                                                   "id":"54cea43d-5970-4c73-b9ac-fea656f3c722",
+                                                   "_26411a1861294160833743e45d0eaad9":{
+                                                      "name":"tomcat"
+                                                   }
+                                                },
+                                                "name":"orion",
+                                                "port":"8080",
+                                                "instance":{
+                                                   "?":{
+                                                      "type":"io.murano.resources.LinuxMuranoInstance",
+                                                      "id":"ef984a74-29a4-45c0-b1dc-2ab9f075732e"
+                                                   },
+                                                   "image":"cloud-fedora-v3",
+                                                   "assignFloatingIp":"true",
+                                                   "keyname":"mykeyname",
+                                                   "flavor":"m1.medium"
+                                                }
+                                             }
+                                          ],
+                                          "defaultNetworks":{
+                                             "environment":{
+                                                "?":{
+                                                   "type":"io.murano.resources.NeutronNetwork",
+                                                   "id":"bda695a392cb4ef781d7df708b9c55ad"
+                                                },
+                                                "name":"template_name-network"
+                                             },
+                                             "flat": None
+                                          }
+                                       },
+                                       "Attributes":[
+
+                                       ]
+                                    }
+
+    session_mock = Mock(name="db_session")
+
+    config = {'query.return_value.get.return_value': template_mock}
+    session_mock.configure_mock(**config)
+    return session_mock
+
+
+def get_session_without_services():
+
+    template_mock = Mock(name="template", spec=open)
+
+    template_mock.description = {
+        "Objects": {
+            "?": {
+                "type": "io.murano.Template",
+                "id": "fccaf0e5d9f044709209c11bcefda8bf"
+            },
+            "name":"template_name",
+            "defaultNetworks": {
+                "environment": {
+                "?": {
+                    "type": "io.murano.resources.NeutronNetwork",
+                    "id": "bda695a392cb4ef781d7df708b9c55ad"
+                },
+                "name": "template_name-network"
+                },
+                "flat": None
+            }
+        },
+        "Attributes": []
+    }
+
+    session_mock = Mock(name="db_session")
+
+    config = {'query.return_value.get.return_value': template_mock}
+    session_mock.configure_mock(**config)
+    return session_mock
+
+
+def create_environment_mock(*args, **kwargs):
+    environment = Mock()
+    environment.description =\
+        {
+            "Objects": {
+                "?": {
+                    "type": "io.murano.Environment",
+                    "id": "33160d73908941c3b8fe4330ce64be15"
+                },
+                "name": "myenv1",
+                "defaultNetworks": {
+                "environment": {
+                    "?": {
+                        "type": "io.murano.resources.NeutronNetwork",
+                        "id": "2c3055186e84487983970eceb73b2baf"
+                    },
+                    "name": "myenv1-network"
+                },
+                "flat": None
+                }
+            },
+            "Attributes": []
+        }
+    return environment
+
+
+def create_session(environment_id, user_id):
+
+    session = models.Session()
+    session.id = '12345678'
+    session.description = ''
+    return session
 
 
 class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
@@ -356,3 +481,129 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
         self.assertEqual(services, json.loads(result.body))
 
         self.assertEqual(2, mock_uuid.call_count)
+
+    def test_create_environment_with_invalid_name(self):
+        """ Test that operation return error with invalid environment name """
+        template = templates.Controller()
+
+        invalid_body = {'name': '1232'}
+        request = Mock()
+        template_id = "1234"
+
+        self.assertRaises(exc.HTTPClientError, template.create_environment, request, template_id, invalid_body)
+
+    @patch('murano.db.session.get_session', get_session)
+    @patch('murano.db.services.environments.EnvironmentServices')
+    @patch('murano.db.services.sessions.SessionServices')
+    def test_create_environment(self, services_sess_mock, env_services_mock):
+        """ Test that environment is created, session configured """
+        template = templates.Controller()
+
+        env_services_mock.create.side_effect = create_environment_mock
+
+        services_sess_mock.create.side_effect = create_session
+
+        body = {'name': 'my_template'}
+        request = Mock()
+        template_id = "1234"
+        session_id = "12345678"
+
+        expected_description =\
+        {
+            "Objects": {
+                "?": {
+                    "type": "io.murano.Environment",
+                    "id": "33160d73908941c3b8fe4330ce64be15"
+                },
+                "name": "myenv1",
+                "defaultNetworks": {
+                "environment": {
+                    "?": {
+                        "type": "io.murano.resources.NeutronNetwork",
+                        "id": "2c3055186e84487983970eceb73b2baf"
+                    },
+                    "name": "myenv1-network"
+                },
+                "flat": None
+                },
+                "services": [
+                    {
+                    "?":{
+                       "type":"io.murano.apps.apache.Tomcat",
+                       "id":"54cea43d-5970-4c73-b9ac-fea656f3c722",
+                       "_26411a1861294160833743e45d0eaad9":{
+                          "name":"tomcat"
+                       }
+                    },
+                    "name":"orion",
+                    "port":"8080",
+                    "instance":{
+                       "?":{
+                          "type":"io.murano.resources.LinuxMuranoInstance",
+                          "id":"ef984a74-29a4-45c0-b1dc-2ab9f075732e"
+                       },
+                       "image":"cloud-fedora-v3",
+                       "assignFloatingIp":"true",
+                       "keyname":"mykeyname",
+                       "flavor":"m1.medium"
+                    }
+                    }
+                ],
+            },
+            "Attributes": []
+        }
+
+        session_result = template.create_environment(request, template_id, body)
+
+        env_services_mock.create.assert_is_called()
+        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description)
+        services_sess_mock.create.assert_is_called()
+        self.assertIsNotNone(session_result)
+        self.assertEqual('12345678', session_result['id'])
+
+    @patch('murano.db.session.get_session', get_session_without_services)
+    @patch('murano.db.services.environments.EnvironmentServices')
+    @patch('murano.db.services.sessions.SessionServices')
+    def test_create_environment_with_template_without_services(self, services_sess_mock, env_services_mock):
+        """ Test that environment is created, session with template without services """
+        template = templates.Controller()
+
+        env_services_mock.create.side_effect = create_environment_mock
+
+        services_sess_mock.create.side_effect = create_session
+
+        body = {'name': 'my_template'}
+        request = Mock()
+        template_id = "1234"
+        session_id = "12345678"
+
+        expected_description = {
+            "Objects": {
+                "?": {
+                    "type": "io.murano.Environment",
+                    "id": "33160d73908941c3b8fe4330ce64be15"
+                },
+                "name": "myenv1",
+                "defaultNetworks": {
+                "environment": {
+                    "?": {
+                        "type": "io.murano.resources.NeutronNetwork",
+                        "id": "2c3055186e84487983970eceb73b2baf"
+                    },
+                    "name": "myenv1-network"
+                },
+                "flat": None
+                },
+            },
+            "Attributes": []
+        }
+
+        session_result = template.create_environment(request, template_id, body)
+
+        env_services_mock.create.assert_is_called()
+        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description)
+        services_sess_mock.create.assert_is_called()
+        self.assertIsNotNone(session_result)
+        self.assertEqual('12345678', session_result['id'])
+
+

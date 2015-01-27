@@ -119,7 +119,7 @@ class API(wsgi.Router):
                        conditions={'method': ['DELETE']})
         mapper.connect('/templates/{template_id}/createenvironment',
                        controller=templates_resource,
-                       action='createenvironment',
+                       action='create_environment',
                        conditions={'method': ['POST']})
 
         applications_resource = applications.create_resource()
