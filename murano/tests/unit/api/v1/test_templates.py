@@ -29,50 +29,37 @@ def get_session():
 
     template_mock = Mock(name="template", spec=open)
 
-    template_mock.description = {"Objects":{
-                                          "?":{
-                                             "type":"io.murano.Template",
-                                             "id":"fccaf0e5d9f044709209c11bcefda8bf"
-                                          },
-                                          "name":"template_name",
-                                          "services":[
-                                             {
-                                                "?":{
-                                                   "type":"io.murano.apps.apache.Tomcat",
-                                                   "id":"54cea43d-5970-4c73-b9ac-fea656f3c722",
-                                                   "_26411a1861294160833743e45d0eaad9":{
-                                                      "name":"tomcat"
-                                                   }
-                                                },
-                                                "name":"orion",
-                                                "port":"8080",
-                                                "instance":{
-                                                   "?":{
-                                                      "type":"io.murano.resources.LinuxMuranoInstance",
-                                                      "id":"ef984a74-29a4-45c0-b1dc-2ab9f075732e"
-                                                   },
-                                                   "image":"cloud-fedora-v3",
-                                                   "assignFloatingIp":"true",
-                                                   "keyname":"mykeyname",
-                                                   "flavor":"m1.medium"
-                                                }
-                                             }
-                                          ],
-                                          "defaultNetworks":{
-                                             "environment":{
-                                                "?":{
-                                                   "type":"io.murano.resources.NeutronNetwork",
-                                                   "id":"bda695a392cb4ef781d7df708b9c55ad"
-                                                },
-                                                "name":"template_name-network"
-                                             },
-                                             "flat": None
-                                          }
-                                       },
-                                       "Attributes":[
-
-                                       ]
-                                    }
+    template_mock.description = {
+        "services": [
+            {
+                "port": "8080",
+                "instance": {
+                    "assignFloatingIp": "true",
+                    "keyname": "mykeyname",
+                    "image": "cloud-fedora-v3",
+                    "flavor": "m1.medium",
+                    "?": {
+                        "type": "io.murano.resources.LinuxMuranoInstance",
+                        "id": "ef984a74-29a4-45c0-b1dc-2ab9f075732e"
+                    }
+                },
+                "?": {
+                    "type": "io.murano.apps.apache.Tomcat",
+                    "_26411a1861294160833743e45d0eaad9": {
+                        "name": "tomcat"
+                    },
+                    "id": "54cea43d-5970-4c73-b9ac-fea656f3c722"
+                },
+                "name": "orion"
+            }
+        ],
+        "name": "template_name",
+        "?": {
+            "type": "io.murano.Template",
+            "id": "e3b40c30d0bc473790a90be7104c2b5b"
+        },
+        "tenant_id": "00000000000000000000000000000001"
+    }
 
     session_mock = Mock(name="db_session")
 
@@ -86,24 +73,12 @@ def get_session_without_services():
     template_mock = Mock(name="template", spec=open)
 
     template_mock.description = {
-        "Objects": {
-            "?": {
-                "type": "io.murano.Template",
-                "id": "fccaf0e5d9f044709209c11bcefda8bf"
-            },
-            "name":"template_name",
-            "defaultNetworks": {
-                "environment": {
-                "?": {
-                    "type": "io.murano.resources.NeutronNetwork",
-                    "id": "bda695a392cb4ef781d7df708b9c55ad"
-                },
-                "name": "template_name-network"
-                },
-                "flat": None
-            }
+        "name": "template_name",
+        "?": {
+            "type": "io.murano.Template",
+            "id": "e3b40c30d0bc473790a90be7104c2b5b"
         },
-        "Attributes": []
+        "tenant_id": "00000000000000000000000000000001"
     }
 
     session_mock = Mock(name="db_session")
@@ -595,55 +570,54 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
         template_id = "1234"
         session_id = "12345678"
 
-        expected_description =\
-        {
-            "Objects": {
-                "?": {
-                    "type": "io.murano.Environment",
-                    "id": "33160d73908941c3b8fe4330ce64be15"
-                },
-                "name": "myenv1",
-                "defaultNetworks": {
-                "environment": {
-                    "?": {
-                        "type": "io.murano.resources.NeutronNetwork",
-                        "id": "2c3055186e84487983970eceb73b2baf"
+        expected_description = {
+            'Attributes': [],
+            'Objects': {
+                'defaultNetworks': {
+                    'environment': {
+                        'name': 'myenv1-network',
+                        '?': {
+                            'type': 'io.murano.resources.NeutronNetwork',
+                            'id': '2c3055186e84487983970eceb73b2baf'
+                        }
                     },
-                    "name": "myenv1-network"
+                    'flat': None
                 },
-                "flat": None
+                'name': 'myenv1',
+                '?': {
+                    'type': 'io.murano.Environment',
+                    'id': '33160d73908941c3b8fe4330ce64be15'
                 },
-                "services": [
+                'services': [
                     {
-                    "?":{
-                       "type":"io.murano.apps.apache.Tomcat",
-                       "id":"54cea43d-5970-4c73-b9ac-fea656f3c722",
-                       "_26411a1861294160833743e45d0eaad9":{
-                          "name":"tomcat"
-                       }
-                    },
-                    "name":"orion",
-                    "port":"8080",
-                    "instance":{
-                       "?":{
-                          "type":"io.murano.resources.LinuxMuranoInstance",
-                          "id":"ef984a74-29a4-45c0-b1dc-2ab9f075732e"
-                       },
-                       "image":"cloud-fedora-v3",
-                       "assignFloatingIp":"true",
-                       "keyname":"mykeyname",
-                       "flavor":"m1.medium"
-                    }
+                        'instance': {
+                            'assignFloatingIp': 'true',
+                            'keyname': 'mykeyname',
+                            'image': 'cloud-fedora-v3',
+                            'flavor': 'm1.medium',
+                            '?': {
+                                'type': 'io.murano.resources.LinuxMuranoInstance',
+                                'id': 'ef984a74-29a4-45c0-b1dc-2ab9f075732e'
+                            }
+                        },
+                        'port': '8080',
+                        '?': {
+                            '_26411a1861294160833743e45d0eaad9': {
+                                'name': 'tomcat'
+                            },
+                            'type': 'io.murano.apps.apache.Tomcat',
+                            'id': '54cea43d-5970-4c73-b9ac-fea656f3c722'
+                        }, 'name': 'orion'
                     }
                 ],
-            },
-            "Attributes": []
+            }
         }
 
         session_result = template.create_environment(request, template_id, body)
 
         env_services_mock.create.assert_is_called()
-        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description)
+        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description,
+                                                                          inner=False)
         services_sess_mock.create.assert_is_called()
         self.assertIsNotNone(session_result)
         self.assertEqual('12345678', session_result['id'])
@@ -688,7 +662,8 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
         session_result = template.create_environment(request, template_id, body)
 
         env_services_mock.create.assert_is_called()
-        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description)
+        env_services_mock.save_environment_description.assert_called_with(session_id, expected_description,
+                                                                          inner=False)
         services_sess_mock.create.assert_is_called()
         self.assertIsNotNone(session_result)
         self.assertEqual('12345678', session_result['id'])

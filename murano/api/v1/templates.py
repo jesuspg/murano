@@ -152,9 +152,8 @@ class Controller(object):
         return
 
     def has_services(self, template):
-        if isinstance(template.description['Objects'], types.DictionaryType):
-            if 'services' in template.description['Objects'].keys():
-                return True
+        if 'services' in template.description.keys():
+            return True
         return False
 
 
@@ -192,14 +191,11 @@ class Controller(object):
         user_id = request.context.user
         session = sessions.SessionServices.create(environment.id, user_id)
 
-        path = '/Objects/services'
-
         if self.has_services(template):
-            services_node = utils.TraverseHelper.get(path, template.description)
-            environment.description['Objects'].update({'services': services_node})
+            services_node = utils.TraverseHelper.get("services", template.description)
+            utils.TraverseHelper.update("/Objects/services", services_node, environment.description)
 
-        environments.EnvironmentServices.save_environment_description(session.id, environment.description)
-        environment.save(unit)
+        environments.EnvironmentServices.save_environment_description(session.id, environment.description, inner=False)
 
         return session.to_dict()
 
