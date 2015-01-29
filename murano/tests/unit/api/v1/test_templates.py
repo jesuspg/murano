@@ -620,7 +620,7 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
                                                                           inner=False)
         services_sess_mock.create.assert_is_called()
         self.assertIsNotNone(session_result)
-        self.assertEqual('12345678', session_result['id'])
+        self.assertEqual('12345678', session_result['session_id'])
 
     @patch('murano.db.session.get_session', get_session_without_services)
     @patch('murano.db.services.environments.EnvironmentServices')
@@ -666,5 +666,5 @@ class TestTemplateApi(tb.ControllerTest, tb.MuranoApiTestCase):
                                                                           inner=False)
         services_sess_mock.create.assert_is_called()
         self.assertIsNotNone(session_result)
-        self.assertEqual('12345678', session_result['id'])
+        self.assertEqual('12345678', session_result['session_id'])
 

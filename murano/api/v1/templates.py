@@ -197,7 +197,7 @@ class Controller(object):
 
         environments.EnvironmentServices.save_environment_description(session.id, environment.description, inner=False)
 
-        return session.to_dict()
+        return {"session_id": session.id, "environment_id": environment.id}
 
 
 def create_resource():
